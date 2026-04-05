@@ -1,0 +1,20 @@
+# Clés API et fichiers sensibles — NE JAMAIS VERSIONNER
+api-keys.conf
+*.key
+*.pem
+*.env
+.env*
+secrets.conf
+credentials.conf
+
+# Données CVE générées (fichiers live — potentiellement volumineux)
+assets/data/cve-*.json
+assets/data/index.json
+assets/data/cve-recent.json
+
+# Logs
+*.log
+
+# Fichiers temporaires
+*.tmp
+*.ndjson
