@@ -65,41 +65,33 @@ L'objectif : afficher en temps réel les CVE publiées avec leurs scores CVSS, r
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    SERVEUR PRINCIPAL                        │
-│                                                             │
-│  ┌─────────────────┐    ┌──────────────────────────────┐   │
-│  │  cron-cve-fetch  │    │  nginx /api/nvd/ (proxy)     │   │
-│  │  3×/jour        │───▶│  Injecte la clé API NVD      │   │
-│  │  bash + curl    │    │  depuis /etc/nginx/api-keys  │   │
-│  └────────┬────────┘    └──────────────┬───────────────┘   │
-│           │                            │                    │
-│           │ Stocke                     ▼                    │
-│           │                   https://services.nvd.nist.gov │
-│           ▼                                                 │
-│  /var/www/html/assets/data/                                 │
-│  ├── cve-2025-01.json      (mois complets)                  │
-│  ├── cve-2025-02.json                                       │
-│  ├── ...                                                    │
-│  ├── cve-recent.json       (7j glissants lastModified)      │
-│  └── index.json            (liste des mois disponibles)     │
-│                                                             │
-│  [ rsync optionnel → serveur web distant ]                  │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              │ Fichiers JSON statiques (HTTP)
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    NAVIGATEUR CLIENT                        │
-│                                                             │
-│  cve.html + cve-fetcher.js                                  │
-│  fetch(assets/data/cve-YYYY-MM.json)                        │
-│                                                             │
-│  ✔ Aucun appel API NVD depuis le navigateur                 │
-│  ✔ Aucune clé API exposée                                   │
-│  ✔ Zéro dépendance JavaScript externe                       │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    NVD["🌐 NVD — services.nvd.nist.gov\nAPI officielle NIST"]
+
+    subgraph SRV["🖥️ Serveur — Debian 13"]
+        direction TB
+        CRON["⏱️ cron-cve-fetch.sh\n3×/jour — bash + curl"]
+        PROXY["🔒 nginx /api/nvd/\nProxy local — injecte la clé API\ndepuis /etc/nginx/api-keys.conf"]
+        DATA["📦 /assets/data/\ncve-YYYY-MM.json   mois complets\ncve-recent.json    7j lastModified\nindex.json         liste des mois"]
+        RSYNC["🔄 rsync optionnel\n→ serveur web distant"]
+
+        CRON -->|"http://127.0.0.1/api/nvd/"| PROXY
+        PROXY -->|"HTTPS + apiKey header"| NVD
+        NVD -->|"JSON réponse"| PROXY
+        PROXY --> CRON
+        CRON -->|"Écriture atomique"| DATA
+        DATA -.->|"optionnel"| RSYNC
+    end
+
+    subgraph CLIENT["🌍 Navigateur Client"]
+        direction TB
+        HTML["cve.html + cve-fetcher.js"]
+        NOTE["✔ Aucun appel API NVD direct\n✔ Aucune clé API exposée\n✔ Zéro dépendance externe"]
+        HTML --- NOTE
+    end
+
+    DATA -->|"Fichiers JSON statiques HTTP"| CLIENT
 ```
 
 ### Principe de sécurité clé : la clé API ne quitte jamais le serveur
