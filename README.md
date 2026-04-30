@@ -8,7 +8,7 @@
 
   <br></br>
 
-  <h2>Laboratoire numérique pour la cybersécurité, Linux & IT.</h2>
+  <h2>CVE Tracker — suivi des vulnérabilités critiques, alertes, NVD.</h2>
 
   <p align="center">
     <a href="https://0xcyberlitech.github.io/">
